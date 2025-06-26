@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "api/webhook.js": {
+      "maxDuration": 10
+    },
+    "api/daily-summary.js": {
+      "maxDuration": 15
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/daily-summary",
+      "schedule": "0 18 * * *"
+    }
+  ],
+  "env": {
+    "TELEGRAM_BOT_TOKEN": "@telegram_bot_token",
+    "ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "CHAT_ID": "@chat_id"
+  }
+}

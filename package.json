@@ -1,0 +1,31 @@
+{
+  "name": "telegram-focus-bot",
+  "version": "1.0.0",
+  "description": "MVP Telegram bot for focus tracking with natural language processing and estimation accuracy",
+  "main": "api/webhook.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "focus",
+    "productivity",
+    "estimation",
+    "tracking"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
+    "@vercel/kv": "^1.0.1"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
