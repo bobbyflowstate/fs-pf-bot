@@ -17,7 +17,7 @@
     "TELEGRAM_BOT_TOKEN": "@telegram_bot_token",
     "ANTHROPIC_API_KEY": "@anthropic_api_key",
     "CHAT_ID": "@chat_id",
-    "UPSTASH_REDIS_REST_URL": "@upstash_redis_rest_url",
-    "UPSTASH_REDIS_REST_TOKEN": "@upstash_redis_rest_token"
+    "KV_REST_API_URL": "@kv_rest_api_url",
+    "KV_REST_API_TOKEN": "@kv_rest_api_token"
   }
 }

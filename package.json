@@ -20,7 +20,8 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
-    "@upstash/redis": "^1.25.1"
+    "@upstash/redis": "^1.25.1",
+    "dotenv": "^16.5.0"
   },
   "devDependencies": {
     "@vercel/node": "^3.0.7"
