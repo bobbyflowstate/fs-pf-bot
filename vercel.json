@@ -1,4 +1,6 @@
 {
+  "buildCommand": null,
+  "outputDirectory": null,
   "functions": {
     "api/webhook.js": {
       "maxDuration": 10
