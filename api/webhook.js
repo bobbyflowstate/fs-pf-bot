@@ -34,9 +34,30 @@ export default async function handler(req, res) {
       // Send confirmation with accuracy feedback
       if (completedTask && completedTask.estimated_minutes) {
         const accuracy = completedTask.accuracy_percentage;
-        const emoji = accuracy >= 90 ? '🎯' : accuracy >= 70 ? '👍' : '📊';
+        const estimated = completedTask.estimated_minutes;
+        const actual = parsed.actual_minutes;
+        
+        // Determine motivational message based on timing
+        let motivationalMessage = '';
+        let mainEmoji = '🎯';
+        
+        if (actual < estimated) {
+          // Finished early
+          motivationalMessage = '🚀 Nice efficiency!';
+          mainEmoji = '⚡';
+        } else if (actual > estimated) {
+          // Took longer than expected
+          motivationalMessage = '⏰ Took a bit longer than expected';
+        } else {
+          // Perfect timing
+          motivationalMessage = '🎯 Perfect estimate!';
+          mainEmoji = '✨';
+        }
+        
+        const accuracyEmoji = accuracy >= 90 ? '🎯' : accuracy >= 70 ? '👍' : '📊';
+        
         await sendMessage(message.chat.id, 
-          `${emoji} Task completed! Est: ${completedTask.estimated_minutes}m, Actual: ${parsed.actual_minutes}m (${accuracy}% accuracy)`
+          `${mainEmoji} Task completed! Est: ${estimated}m, Actual: ${actual}m\n${motivationalMessage}\n${accuracyEmoji} Accuracy: ${accuracy}%`
         );
       }
     }
