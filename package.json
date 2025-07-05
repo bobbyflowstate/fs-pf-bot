@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "MVP Telegram bot for focus tracking with natural language processing and estimation accuracy",
   "main": "api/webhook.js",
+  "type": "module",
   "scripts": {
     "dev": "vercel dev",
     "build": "vercel build",
