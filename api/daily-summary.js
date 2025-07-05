@@ -1,15 +1,32 @@
-import { getAllCompletedTasks } from '../lib/storage.js';
+import { getAllCompletedTasks, getAllActiveChatIds } from '../lib/storage.js';
 import { sendMessage } from '../lib/telegram.js';
 
 export default async function handler(req, res) {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const tasks = await getAllCompletedTasks(process.env.CHAT_ID, today);
+    const activeChatIds = await getAllActiveChatIds();
     
-    const summary = generateSimpleSummary(tasks);
-    await sendMessage(process.env.CHAT_ID, summary);
+    console.log('=== DAILY SUMMARY ===');
+    console.log('Active chat IDs:', activeChatIds);
     
-    res.status(200).json({ ok: true, summary });
+    const summaries = [];
+    
+    // Send summary to each active chat
+    for (const chatId of activeChatIds) {
+      console.log(`Processing summary for chat ${chatId}`);
+      const tasks = await getAllCompletedTasks(chatId, today);
+      
+      if (tasks.length > 0) {
+        const summary = generateSimpleSummary(tasks);
+        console.log(`Sending summary to chat ${chatId}:`, summary.substring(0, 100) + '...');
+        await sendMessage(chatId, summary);
+        summaries.push({ chatId, summary, taskCount: tasks.length });
+      } else {
+        console.log(`No tasks found for chat ${chatId}, skipping summary`);
+      }
+    }
+    
+    res.status(200).json({ ok: true, summaries, activeChatIds });
     
   } catch (error) {
     console.error('Daily summary error:', error);
