@@ -5,7 +5,12 @@
       "Bash(git init:*)",
       "Bash(git branch:*)",
       "Bash(mkdir:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(vercel:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

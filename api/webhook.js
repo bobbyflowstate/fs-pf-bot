@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     
     // Check for /summary command
     if (message.text.toLowerCase().trim() === '/summary') {
-      const summary = await getUserSummary(message.from.id);
+      const summary = await getUserSummary(message.chat.id, message.from.id);
       
       // Format personal summary message
       let summaryText = `📊 Your Focus Summary\n`;
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     const parsed = await parseMessage(message.text, message.from.username);
     
     if (parsed.type === 'task_start') {
-      await saveTask(message.from.id, {
+      await saveTask(message.chat.id, message.from.id, {
         type: 'start',
         username: message.from.username,
         estimated_minutes: parsed.estimated_minutes,
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     }
     
     if (parsed.type === 'task_completion') {
-      const completedTask = await completeTask(message.from.id, parsed.actual_minutes);
+      const completedTask = await completeTask(message.chat.id, message.from.id, parsed.actual_minutes);
       
       // Send confirmation with accuracy feedback
       if (completedTask && completedTask.estimated_minutes) {

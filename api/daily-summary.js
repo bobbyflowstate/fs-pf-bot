@@ -4,7 +4,7 @@ import { sendMessage } from '../lib/telegram.js';
 export default async function handler(req, res) {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const tasks = await getAllCompletedTasks(today);
+    const tasks = await getAllCompletedTasks(process.env.CHAT_ID, today);
     
     const summary = generateSimpleSummary(tasks);
     await sendMessage(process.env.CHAT_ID, summary);
