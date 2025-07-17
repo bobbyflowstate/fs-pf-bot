@@ -2,6 +2,55 @@ import { parseMessage } from '../lib/parser.js';
 import { saveTask, completeTask, getUserSummary, setPendingCompletion, getPendingCompletion, clearPendingCompletion, findTaskToComplete } from '../lib/storage.js';
 import { sendMessage } from '../lib/telegram.js';
 
+// Helper function to generate motivational message based on timing
+function generateMotivationalMessage(actual, estimated) {
+  let motivationalMessage = '';
+  let mainEmoji = '🎯';
+  
+  if (actual < estimated) {
+    motivationalMessage = '🚀 Nice efficiency!';
+    mainEmoji = '⚡';
+  } else if (actual > estimated) {
+    motivationalMessage = '⏰ Took a bit longer than expected';
+  } else {
+    motivationalMessage = '🎯 Perfect estimate!';
+    mainEmoji = '✨';
+  }
+  
+  return { motivationalMessage, mainEmoji };
+}
+
+// Helper function to format completion response message
+function formatCompletionResponse(completedTask, actual, suffix = '') {
+  const accuracy = completedTask.accuracy_percentage;
+  const estimated = completedTask.estimated_minutes;
+  const { motivationalMessage, mainEmoji } = generateMotivationalMessage(actual, estimated);
+  
+  const accuracyEmoji = accuracy >= 90 ? '🎯' : accuracy >= 70 ? '👍' : '📊';
+  const replyIndicator = completedTask.completed_via_reply ? ' (via reply)' : '';
+  
+  return `✅ Task: "${completedTask.task_description}"\n${mainEmoji} Est: ${estimated}m, Actual: ${actual}m${replyIndicator}${suffix}\n${motivationalMessage}\n${accuracyEmoji} Accuracy: ${accuracy}%`;
+}
+
+// Helper function to handle task completion and send response
+async function handleTaskCompletion(chatId, userId, actualMinutes, replyToMessageId, suffix = '') {
+  const completedTask = await completeTask(chatId, userId, actualMinutes, replyToMessageId);
+  console.log('Completed task result:', completedTask);
+  
+  if (completedTask && completedTask.estimated_minutes) {
+    const responseMessage = formatCompletionResponse(completedTask, actualMinutes, suffix);
+    await sendMessage(chatId, responseMessage);
+    return true;
+  }
+  return false;
+}
+
+// Helper function to extract time from message text
+function extractTimeFromText(text) {
+  const timeMatch = text.match(/(\d+)\s*(minutes?|mins?|m(?:\s|$))/i);
+  return timeMatch ? parseInt(timeMatch[1]) : null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -75,33 +124,8 @@ export default async function handler(req, res) {
       if (parsed.actual_minutes) {
         // User provided time, complete the task
         console.log('User provided time for pending completion:', parsed.actual_minutes);
-        const completedTask = await completeTask(message.chat.id, message.from.id, parsed.actual_minutes, pendingCompletion.reply_to_message_id);
+        await handleTaskCompletion(message.chat.id, message.from.id, parsed.actual_minutes, pendingCompletion.reply_to_message_id);
         await clearPendingCompletion(message.chat.id, message.from.id);
-        
-        if (completedTask && completedTask.estimated_minutes) {
-          const accuracy = completedTask.accuracy_percentage;
-          const estimated = completedTask.estimated_minutes;
-          const actual = parsed.actual_minutes;
-          
-          let motivationalMessage = '';
-          let mainEmoji = '🎯';
-          
-          if (actual < estimated) {
-            motivationalMessage = '🚀 Nice efficiency!';
-            mainEmoji = '⚡';
-          } else if (actual > estimated) {
-            motivationalMessage = '⏰ Took a bit longer than expected';
-          } else {
-            motivationalMessage = '🎯 Perfect estimate!';
-            mainEmoji = '✨';
-          }
-          
-          const accuracyEmoji = accuracy >= 90 ? '🎯' : accuracy >= 70 ? '👍' : '📊';
-          const replyIndicator = completedTask.completed_via_reply ? ' (via reply)' : '';
-          
-          const responseMessage = `✅ Task: "${completedTask.task_description}"\n${mainEmoji} Est: ${estimated}m, Actual: ${actual}m${replyIndicator}\n${motivationalMessage}\n${accuracyEmoji} Accuracy: ${accuracy}%`;
-          await sendMessage(message.chat.id, responseMessage);
-        }
         return res.status(200).json({ ok: true });
         
       } else if (parsed.type === 'task_completion') {
@@ -116,6 +140,20 @@ export default async function handler(req, res) {
           await sendMessage(message.chat.id, responseMessage);
         }
         return res.status(200).json({ ok: true });
+        
+      } else {
+        // Fallback: try to extract time from message text directly
+        console.log('Fallback: trying to extract time from message text');
+        const extractedTime = extractTimeFromText(message.text);
+        
+        if (extractedTime) {
+          console.log('Extracted time via fallback:', extractedTime);
+          await handleTaskCompletion(message.chat.id, message.from.id, extractedTime, pendingCompletion.reply_to_message_id, ' (fallback)');
+          await clearPendingCompletion(message.chat.id, message.from.id);
+          return res.status(200).json({ ok: true });
+        }
+        
+        console.log('No time found in pending completion response, continuing with normal flow');
       }
     }
     
@@ -172,39 +210,21 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       
-      const completedTask = await completeTask(message.chat.id, message.from.id, parsed.actual_minutes, replyToMessageId);
-      console.log('Completed task result:', completedTask);
-      
-      // Send confirmation with accuracy feedback
-      if (completedTask && completedTask.estimated_minutes) {
-        const accuracy = completedTask.accuracy_percentage;
-        const estimated = completedTask.estimated_minutes;
-        const actual = parsed.actual_minutes;
-        
-        // Determine motivational message based on timing
-        let motivationalMessage = '';
-        let mainEmoji = '🎯';
-        
-        if (actual < estimated) {
-          // Finished early
-          motivationalMessage = '🚀 Nice efficiency!';
-          mainEmoji = '⚡';
-        } else if (actual > estimated) {
-          // Took longer than expected
-          motivationalMessage = '⏰ Took a bit longer than expected';
-        } else {
-          // Perfect timing
-          motivationalMessage = '🎯 Perfect estimate!';
-          mainEmoji = '✨';
-        }
-        
-        const accuracyEmoji = accuracy >= 90 ? '🎯' : accuracy >= 70 ? '👍' : '📊';
-        const replyIndicator = completedTask.completed_via_reply ? ' (via reply)' : '';
-        
-        const responseMessage = `✅ Task: "${completedTask.task_description}"\n${mainEmoji} Est: ${estimated}m, Actual: ${actual}m${replyIndicator}\n${motivationalMessage}\n${accuracyEmoji} Accuracy: ${accuracy}%`;
-        console.log('Sending completion message to chat:', message.chat.id, 'Message:', responseMessage);
-        await sendMessage(message.chat.id, responseMessage);
-        console.log('Completion message sent successfully');
+      await handleTaskCompletion(message.chat.id, message.from.id, parsed.actual_minutes, replyToMessageId);
+    }
+    
+    // Handle time-only responses when no pending completion exists
+    if (parsed.type === 'other' && parsed.actual_minutes) {
+      console.log('Time-only response without pending completion, ignoring');
+      // This is intentionally ignored - time without context shouldn't do anything
+    }
+    
+    // Fallback: Handle time-only responses that weren't caught by parser
+    if (!pendingCompletion && parsed.type === 'other') {
+      const extractedTime = extractTimeFromText(message.text);
+      if (extractedTime) {
+        console.log('Extracted time from text but no pending completion, ignoring');
+        // This is intentionally ignored - time without context shouldn't do anything
       }
     }
     
