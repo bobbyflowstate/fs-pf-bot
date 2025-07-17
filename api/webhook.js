@@ -33,13 +33,13 @@ function formatCompletionResponse(completedTask, actual, suffix = '') {
 }
 
 // Helper function to handle task completion and send response
-async function handleTaskCompletion(chatId, userId, actualMinutes, replyToMessageId, suffix = '') {
+async function handleTaskCompletion(chatId, userId, actualMinutes, replyToMessageId, suffix = '', messageThreadId = null) {
   const completedTask = await completeTask(chatId, userId, actualMinutes, replyToMessageId);
   console.log('Completed task result:', completedTask);
   
   if (completedTask && completedTask.estimated_minutes) {
     const responseMessage = formatCompletionResponse(completedTask, actualMinutes, suffix);
-    await sendMessage(chatId, responseMessage);
+    await sendMessage(chatId, responseMessage, messageThreadId);
     return true;
   }
   return false;
@@ -75,7 +75,9 @@ export default async function handler(req, res) {
       chatType: message.chat.type,
       userId: message.from.id,
       username: message.from.username,
-      replyToMessageId: message.reply_to_message?.message_id || null
+      replyToMessageId: message.reply_to_message?.message_id || null,
+      messageThreadId: message.message_thread_id || null,
+      isTopicMessage: message.is_topic_message || false
     });
     
     const isGroupChat = message.chat.type === 'group' || message.chat.type === 'supergroup';
@@ -104,7 +106,7 @@ export default async function handler(req, res) {
       }
       
       console.log('Sending summary to chat:', message.chat.id);
-      await sendMessage(message.chat.id, summaryText);
+      await sendMessage(message.chat.id, summaryText, message.message_thread_id);
       console.log('Summary sent successfully');
       return res.status(200).json({ ok: true });
     }
@@ -124,7 +126,7 @@ export default async function handler(req, res) {
       if (parsed.actual_minutes) {
         // User provided time, complete the task
         console.log('User provided time for pending completion:', parsed.actual_minutes);
-        await handleTaskCompletion(message.chat.id, message.from.id, parsed.actual_minutes, pendingCompletion.reply_to_message_id);
+        await handleTaskCompletion(message.chat.id, message.from.id, parsed.actual_minutes, pendingCompletion.reply_to_message_id, '', message.message_thread_id);
         await clearPendingCompletion(message.chat.id, message.from.id);
         return res.status(200).json({ ok: true });
         
@@ -137,7 +139,7 @@ export default async function handler(req, res) {
         
         if (completedTask && completedTask.estimated_minutes) {
           const responseMessage = `✅ Task: "${completedTask.task_description}"\n✨ Est: ${estimatedTime}m, Actual: ${estimatedTime}m (assumed estimate)\n🎯 Perfect timing!\n🎯 Accuracy: 100%`;
-          await sendMessage(message.chat.id, responseMessage);
+          await sendMessage(message.chat.id, responseMessage, message.message_thread_id);
         }
         return res.status(200).json({ ok: true });
         
@@ -148,7 +150,7 @@ export default async function handler(req, res) {
         
         if (extractedTime) {
           console.log('Extracted time via fallback:', extractedTime);
-          await handleTaskCompletion(message.chat.id, message.from.id, extractedTime, pendingCompletion.reply_to_message_id, ' (fallback)');
+          await handleTaskCompletion(message.chat.id, message.from.id, extractedTime, pendingCompletion.reply_to_message_id, ' (fallback)', message.message_thread_id);
           await clearPendingCompletion(message.chat.id, message.from.id);
           return res.status(200).json({ ok: true });
         }
@@ -202,15 +204,15 @@ export default async function handler(req, res) {
           
           // Ask for time
           const askMessage = `How long did "${taskToComplete.task_description}" take? Please respond with the time (e.g., "25 minutes")`;
-          await sendMessage(message.chat.id, askMessage);
+          await sendMessage(message.chat.id, askMessage, message.message_thread_id);
         } else {
           console.log('No incomplete task found for user');
-          await sendMessage(message.chat.id, 'No active task found to complete.');
+          await sendMessage(message.chat.id, 'No active task found to complete.', message.message_thread_id);
         }
         return res.status(200).json({ ok: true });
       }
       
-      await handleTaskCompletion(message.chat.id, message.from.id, parsed.actual_minutes, replyToMessageId);
+      await handleTaskCompletion(message.chat.id, message.from.id, parsed.actual_minutes, replyToMessageId, '', message.message_thread_id);
     }
     
     // Handle time-only responses when no pending completion exists
