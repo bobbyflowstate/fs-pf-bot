@@ -25,7 +25,8 @@ export default async function handler(req, res) {
       chatId: message.chat.id,
       chatType: message.chat.type,
       userId: message.from.id,
-      username: message.from.username
+      username: message.from.username,
+      replyToMessageId: message.reply_to_message?.message_id || null
     });
     
     const isGroupChat = message.chat.type === 'group' || message.chat.type === 'supergroup';
@@ -87,7 +88,9 @@ export default async function handler(req, res) {
     
     if (parsed.type === 'task_completion') {
       console.log('Processing task completion for user:', message.from.id, 'in chat:', message.chat.id);
-      const completedTask = await completeTask(message.chat.id, message.from.id, parsed.actual_minutes);
+      const replyToMessageId = message.reply_to_message?.message_id || null;
+      console.log('Reply to message ID:', replyToMessageId);
+      const completedTask = await completeTask(message.chat.id, message.from.id, parsed.actual_minutes, replyToMessageId);
       console.log('Completed task result:', completedTask);
       
       // Send confirmation with accuracy feedback
@@ -114,8 +117,9 @@ export default async function handler(req, res) {
         }
         
         const accuracyEmoji = accuracy >= 90 ? '🎯' : accuracy >= 70 ? '👍' : '📊';
+        const replyIndicator = completedTask.completed_via_reply ? ' (via reply)' : '';
         
-        const responseMessage = `${mainEmoji} Task completed! Est: ${estimated}m, Actual: ${actual}m\n${motivationalMessage}\n${accuracyEmoji} Accuracy: ${accuracy}%`;
+        const responseMessage = `${mainEmoji} Task completed! Est: ${estimated}m, Actual: ${actual}m${replyIndicator}\n${motivationalMessage}\n${accuracyEmoji} Accuracy: ${accuracy}%`;
         console.log('Sending completion message to chat:', message.chat.id, 'Message:', responseMessage);
         await sendMessage(message.chat.id, responseMessage);
         console.log('Completion message sent successfully');

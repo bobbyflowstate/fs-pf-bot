@@ -10,7 +10,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(vercel:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue close:*)"
     ],
     "deny": []
   }
