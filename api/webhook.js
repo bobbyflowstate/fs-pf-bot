@@ -119,7 +119,7 @@ export default async function handler(req, res) {
         const accuracyEmoji = accuracy >= 90 ? '🎯' : accuracy >= 70 ? '👍' : '📊';
         const replyIndicator = completedTask.completed_via_reply ? ' (via reply)' : '';
         
-        const responseMessage = `${mainEmoji} Task completed! Est: ${estimated}m, Actual: ${actual}m${replyIndicator}\n${motivationalMessage}\n${accuracyEmoji} Accuracy: ${accuracy}%`;
+        const responseMessage = `✅ Task: "${completedTask.task_description}"\n${mainEmoji} Est: ${estimated}m, Actual: ${actual}m${replyIndicator}\n${motivationalMessage}\n${accuracyEmoji} Accuracy: ${accuracy}%`;
         console.log('Sending completion message to chat:', message.chat.id, 'Message:', responseMessage);
         await sendMessage(message.chat.id, responseMessage);
         console.log('Completion message sent successfully');
