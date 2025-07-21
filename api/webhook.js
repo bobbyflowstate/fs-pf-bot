@@ -1,4 +1,4 @@
-import { parseMessage } from '../lib/parser.js';
+import { parseMessage, categorizeTask } from '../lib/parser.js';
 import { saveTask, completeTask, getUserSummary, setPendingCompletion, getPendingCompletion, clearPendingCompletion, findTaskToComplete } from '../lib/storage.js';
 import { sendMessage } from '../lib/telegram.js';
 
@@ -34,7 +34,15 @@ function formatCompletionResponse(completedTask, actual, suffix = '') {
 
 // Helper function to handle task completion and send response
 async function handleTaskCompletion(chatId, userId, actualMinutes, replyToMessageId, suffix = '', messageThreadId = null) {
-  const completedTask = await completeTask(chatId, userId, actualMinutes, replyToMessageId);
+  // First, find the task to get its description for categorization
+  const taskToComplete = await findTaskToComplete(chatId, userId, replyToMessageId);
+  
+  let category = 'Other';
+  if (taskToComplete && taskToComplete.task_description) {
+    category = await categorizeTask(taskToComplete.task_description);
+  }
+  
+  const completedTask = await completeTask(chatId, userId, actualMinutes, replyToMessageId, category);
   console.log('Completed task result:', completedTask);
   
   if (completedTask && completedTask.estimated_minutes) {
@@ -94,6 +102,27 @@ export default async function handler(req, res) {
       summaryText += `🎯 Average accuracy: ${summary.averageAccuracy}%\n`;
       summaryText += `⏱️ Last 24 hours: ${summary.last24HoursFocus} minutes focused\n`;
       
+      // Add category breakdown if there are categories
+      if (summary.categoryBreakdown && summary.categoryBreakdown.length > 0) {
+        summaryText += `\n📋 Time by Category (Last 24h):\n`;
+        summary.categoryBreakdown.forEach(cat => {
+          // Add emoji for each category
+          const categoryEmoji = {
+            'Communication': '📧',
+            'Development': '💻',
+            'Learning': '📚',
+            'Planning': '📋',
+            'Administrative': '📄',
+            'Problem Solving': '🛠️',
+            'Review': '🔍',
+            'Maintenance': '🔧',
+            'Other': '📌'
+          };
+          const emoji = categoryEmoji[cat.category] || '📌';
+          summaryText += `• ${emoji} ${cat.category}: ${cat.minutes} min (${cat.percentage}%)\n`;
+        });
+      }
+      
       if (summary.recentTasks.length > 0) {
         summaryText += `📋 Recent tasks:\n`;
         summary.recentTasks.forEach(task => {
@@ -134,7 +163,11 @@ export default async function handler(req, res) {
         // User said "Done" again without time, use estimated time
         console.log('User said Done again without time, using estimated time');
         const estimatedTime = pendingCompletion.estimated_minutes;
-        const completedTask = await completeTask(message.chat.id, message.from.id, estimatedTime, pendingCompletion.reply_to_message_id);
+        
+        // Categorize the task before completing it
+        const category = await categorizeTask(pendingCompletion.task_description);
+        
+        const completedTask = await completeTask(message.chat.id, message.from.id, estimatedTime, pendingCompletion.reply_to_message_id, category);
         await clearPendingCompletion(message.chat.id, message.from.id);
         
         if (completedTask && completedTask.estimated_minutes) {
