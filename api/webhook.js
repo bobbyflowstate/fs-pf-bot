@@ -1,4 +1,4 @@
-import { parseMessage, categorizeTask } from '../lib/parser.js';
+import { parseMessage, categorizeTask, parseCompoundMessage } from '../lib/parser.js';
 import { saveTask, completeTask, getUserSummary, setPendingCompletion, getPendingCompletion, clearPendingCompletion, findTaskToComplete } from '../lib/storage.js';
 import { sendMessage } from '../lib/telegram.js';
 
@@ -141,6 +141,55 @@ export default async function handler(req, res) {
     }
     
     console.log('Parsing message:', message.text);
+    
+    // First check if this might be a compound message (completion + start)
+    const compoundResult = await parseCompoundMessage(message.text, message.from.username);
+    
+    if (compoundResult.isCompound) {
+      console.log('Processing compound message: completion + start');
+      console.log('Completion part:', compoundResult.completion);
+      console.log('Start part:', compoundResult.start);
+      
+      const replyToMessageId = message.reply_to_message?.message_id || null;
+      
+      // First, handle the completion
+      if (compoundResult.completion.actual_minutes) {
+        console.log('Processing completion part of compound message');
+        const success = await handleTaskCompletion(
+          message.chat.id, 
+          message.from.id, 
+          compoundResult.completion.actual_minutes, 
+          replyToMessageId, 
+          '', 
+          message.message_thread_id
+        );
+        
+        if (success) {
+          console.log('Completion part processed successfully');
+        } else {
+          console.log('Completion part failed, but continuing with start');
+        }
+      }
+      
+      // Then, handle the task start
+      if (compoundResult.start.estimated_minutes && compoundResult.start.task_description) {
+        console.log('Processing start part of compound message');
+        await saveTask(message.chat.id, message.from.id, {
+          type: 'start',
+          username: message.from.username,
+          estimated_minutes: compoundResult.start.estimated_minutes,
+          task_description: compoundResult.start.task_description,
+          timestamp: Date.now(),
+          message_id: message.message_id,
+          date: new Date().toISOString().split('T')[0]
+        });
+        console.log('New task started from compound message');
+      }
+      
+      return res.status(200).json({ ok: true });
+    }
+    
+    // If not compound, use regular parsing
     const parsed = await parseMessage(message.text, message.from.username);
     console.log('Parse result:', parsed);
     
