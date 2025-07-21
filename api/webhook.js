@@ -1,4 +1,4 @@
-import { parseMessage } from '../lib/parser.js';
+import { parseMessageHybrid } from '../lib/parser.js';
 import { saveTask, completeTask, getUserSummary, setPendingCompletion, getPendingCompletion, clearPendingCompletion, findTaskToComplete } from '../lib/storage.js';
 import { sendMessage } from '../lib/telegram.js';
 
@@ -112,7 +112,7 @@ export default async function handler(req, res) {
     }
     
     console.log('Parsing message:', message.text);
-    const parsed = await parseMessage(message.text, message.from.username);
+    const parsed = await parseMessageHybrid(message.text, message.from.username);
     console.log('Parse result:', parsed);
     
     // Check if user has pending completion first
