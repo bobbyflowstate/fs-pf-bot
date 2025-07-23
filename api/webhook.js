@@ -45,6 +45,22 @@ async function handleTaskCompletion(chatId, userId, actualMinutes, replyToMessag
   return false;
 }
 
+// Helper function to format minutes into readable time (e.g., "1h 30m", "45m")
+function formatMinutes(minutes) {
+  if (!minutes || minutes === 0) return '0m';
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (hours === 0) {
+    return `${minutes}m`;
+  } else if (remainingMinutes === 0) {
+    return `${hours}h`;
+  } else {
+    return `${hours}h ${remainingMinutes}m`;
+  }
+}
+
 // Helper function to extract time from message text
 function extractTimeFromText(text) {
   const timeMatch = text.match(/(\d+)\s*(minutes?|mins?|m(?:\s|$))/i);
@@ -92,7 +108,7 @@ export default async function handler(req, res) {
       // Format personal summary message
       let summaryText = `📊 Your Focus Summary\n`;
       summaryText += `🎯 Average accuracy: ${summary.averageAccuracy}%\n`;
-      summaryText += `⏱️ Last 24 hours: ${summary.last24HoursFocus} minutes focused\n`;
+      summaryText += `⏱️ Last 24 hours: ${formatMinutes(summary.last24HoursFocus)} focused\n`;
       
       // Add category breakdown if available
       if (summary.categoryBreakdown && summary.categoryBreakdown.length > 0) {
@@ -109,7 +125,7 @@ export default async function handler(req, res) {
             'Other': '📌'
           };
           const emoji = categoryEmoji[cat.category] || '📌';
-          summaryText += `• ${emoji} ${cat.category}: ${cat.minutes}min (${cat.percentage}%)\n`;
+          summaryText += `• ${emoji} ${cat.category}: ${formatMinutes(cat.minutes)} (${cat.percentage}%)\n`;
         });
         summaryText += `\n`;
       }
@@ -119,7 +135,7 @@ export default async function handler(req, res) {
         summary.recentTasks.forEach(task => {
           const efficiency = task.actual_minutes < task.estimated_minutes ? ' ⚡' :
                            task.actual_minutes === task.estimated_minutes ? ' ✨' : '';
-          summaryText += `• ${task.estimated_minutes}min task → ${task.actual_minutes}min (${task.accuracy_percentage}% accuracy)${efficiency}\n`;
+          summaryText += `• ${formatMinutes(task.estimated_minutes)} task → ${formatMinutes(task.actual_minutes)} (${task.accuracy_percentage}% accuracy)${efficiency}\n`;
         });
       } else {
         summaryText += `📋 No completed tasks yet - start tracking your focus! 🚀`;
