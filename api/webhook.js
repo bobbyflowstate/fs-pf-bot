@@ -94,6 +94,26 @@ export default async function handler(req, res) {
       summaryText += `🎯 Average accuracy: ${summary.averageAccuracy}%\n`;
       summaryText += `⏱️ Last 24 hours: ${summary.last24HoursFocus} minutes focused\n`;
       
+      // Add category breakdown if available
+      if (summary.categoryBreakdown && summary.categoryBreakdown.length > 0) {
+        summaryText += `\n📋 Time by Category (24h):\n`;
+        summary.categoryBreakdown.forEach(cat => {
+          // Add emoji for each category
+          const categoryEmoji = {
+            'Health & Exercise': '💪',
+            'Breaks & Personal': '☕',
+            'Administrative': '📄',
+            'Core Competency': '💻',
+            'Communication': '📧',
+            'Learning & Development': '📚',
+            'Other': '📌'
+          };
+          const emoji = categoryEmoji[cat.category] || '📌';
+          summaryText += `• ${emoji} ${cat.category}: ${cat.minutes}min (${cat.percentage}%)\n`;
+        });
+        summaryText += `\n`;
+      }
+      
       if (summary.recentTasks.length > 0) {
         summaryText += `📋 Recent tasks:\n`;
         summary.recentTasks.forEach(task => {
