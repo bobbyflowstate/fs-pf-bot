@@ -1,6 +1,7 @@
 import { parseMessageHybrid } from '../lib/parser.js';
 import { saveTask, completeTask, getUserSummary, setPendingCompletion, getPendingCompletion, clearPendingCompletion, findTaskToComplete } from '../lib/storage.js';
 import { sendMessage } from '../lib/telegram.js';
+import { postDailyPlaylists } from '../lib/playlists.js';
 
 // Helper function to generate motivational message based on timing
 function generateMotivationalMessage(actual, estimated) {
@@ -163,6 +164,22 @@ export default async function handler(req, res) {
       console.log('Sending summary to chat:', message.chat.id);
       await sendMessage(message.chat.id, summaryText, message.message_thread_id);
       console.log('Summary sent successfully');
+      return res.status(200).json({ ok: true });
+    }
+    
+    // Check for /playlist command
+    if (message.text.toLowerCase().trim() === '/playlist') {
+      console.log('Processing /playlist command');
+      const success = await postDailyPlaylists();
+      
+      if (success) {
+        console.log('Playlists posted successfully');
+      } else {
+        console.log('No playlists to post or error occurred');
+        // Optionally send feedback message
+        await sendMessage(message.chat.id, 'No playlists available for today or an error occurred.', message.message_thread_id);
+      }
+      
       return res.status(200).json({ ok: true });
     }
     
