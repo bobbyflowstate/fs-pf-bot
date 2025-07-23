@@ -61,6 +61,27 @@ function formatMinutes(minutes) {
   }
 }
 
+// Helper function to format recent task in compact style (e.g., "check email: 30m→35m (86%) ⚡")
+function formatRecentTaskCompact(task) {
+  // Handle missing task description
+  let taskDescription = task.task_description || 'untitled task';
+  
+  // Truncate long descriptions
+  if (taskDescription.length > 25) {
+    taskDescription = taskDescription.substring(0, 22) + '...';
+  }
+  
+  // Format times
+  const estimatedTime = formatMinutes(task.estimated_minutes);
+  const actualTime = formatMinutes(task.actual_minutes);
+  
+  // Determine efficiency icon
+  const efficiency = task.actual_minutes < task.estimated_minutes ? ' ⚡' :
+                   task.actual_minutes === task.estimated_minutes ? ' ✨' : '';
+  
+  return `• ${taskDescription}: ${estimatedTime}→${actualTime} (${task.accuracy_percentage}%)${efficiency}`;
+}
+
 // Helper function to extract time from message text
 function extractTimeFromText(text) {
   const timeMatch = text.match(/(\d+)\s*(minutes?|mins?|m(?:\s|$))/i);
@@ -133,9 +154,7 @@ export default async function handler(req, res) {
       if (summary.recentTasks.length > 0) {
         summaryText += `📋 Recent tasks:\n`;
         summary.recentTasks.forEach(task => {
-          const efficiency = task.actual_minutes < task.estimated_minutes ? ' ⚡' :
-                           task.actual_minutes === task.estimated_minutes ? ' ✨' : '';
-          summaryText += `• ${formatMinutes(task.estimated_minutes)} task → ${formatMinutes(task.actual_minutes)} (${task.accuracy_percentage}% accuracy)${efficiency}\n`;
+          summaryText += formatRecentTaskCompact(task) + '\n';
         });
       } else {
         summaryText += `📋 No completed tasks yet - start tracking your focus! 🚀`;
